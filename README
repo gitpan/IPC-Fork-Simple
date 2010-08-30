@@ -365,13 +365,13 @@ EXAMPLES
   Data Handler
      use warnings;
      use strict;
-     
- use IPC::Fork::Simple;
-     
- my $ipc = IPC::Fork::Simple->new();
+ 
+     use IPC::Fork::Simple;
+ 
+     my $ipc = IPC::Fork::Simple->new();
      my $pid = fork();
-     
- if ( $pid ) {
+ 
+     if ( $pid ) {
          $ipc->spawn_data_handler();
          waitpid( $pid, 0 );
          $ipc->collect_data_from_handler();
@@ -384,16 +384,16 @@ EXAMPLES
   Blocking
      use warnings;
      use strict;
-     
- use IPC::Fork::Simple;
+ 
+     use IPC::Fork::Simple;
      use POSIX ":sys_wait_h";
-     
- my $ipc = IPC::Fork::Simple->new();
-     
- my $pid = fork();
+ 
+     my $ipc = IPC::Fork::Simple->new();
+ 
+     my $pid = fork();
      die 'stupid fork' unless defined $pid;
-     
- if ( $pid ) {
+ 
+     if ( $pid ) {
          $ipc->process_child_data(1);
          my @finished = $ipc->finished_children();
          die unless 1 == scalar( $ipc->finished_children() );
@@ -407,14 +407,14 @@ EXAMPLES
   Polling
      use warnings;
      use strict;
-     
- use IPC::Fork::Simple;
+ 
+     use IPC::Fork::Simple;
      use POSIX ":sys_wait_h";
-     
- my $ipc = IPC::Fork::Simple->new();
+ 
+     my $ipc = IPC::Fork::Simple->new();
      my $pid = fork();
-     
- if ( $pid ) {
+ 
+     if ( $pid ) {
          while ( ! $ipc->finished_children() ) {
              $ipc->process_child_data(0);
              waitpid( -1, WNOHANG );
@@ -429,15 +429,15 @@ EXAMPLES
   Data queues
      use warnings;
      use strict;
-     
- use IPC::Fork::Simple;
-     
- my $ipc = IPC::Fork::Simple->new();
-     
- my $pid = fork();
+ 
+     use IPC::Fork::Simple;
+ 
+     my $ipc = IPC::Fork::Simple->new();
+ 
+     my $pid = fork();
      die 'stupid fork' unless defined $pid;
-     
- if ( $pid ) {
+ 
+     if ( $pid ) {
          $ipc->process_child_data(1);
          die unless 300 == length(${$ipc->pop_from_child( $pid, 'test' )});
          die unless 301 == length(${$ipc->pop_from_child( $pid, 'test' )});
@@ -452,15 +452,15 @@ EXAMPLES
   Bi-directional communication
      use warnings;
      use strict;
-     
- use IPC::Fork::Simple qw/:block_flags/;
-     
- my $ipc = IPC::Fork::Simple->new();
+ 
+     use IPC::Fork::Simple qw/:block_flags/;
+ 
+     my $ipc = IPC::Fork::Simple->new();
      my $master_pid = $$;
      my $pid = fork();
      die 'stupid fork' unless defined $pid;
-     
- if ( $pid ) {
+ 
+     if ( $pid ) {
          $ipc->process_child_data(BLOCK_UNTIL_DATA);
          my $child_connection_data = $ipc->from_child( $pid, 'connection_info' );
          my $ipc2 = IPC::Fork::Simple->new_child( ${$child_connection_data} ) || die;
@@ -476,53 +476,57 @@ EXAMPLES
   Bi-directional communication with data handlers
      use warnings;
      use strict;
-     
- use IPC::Fork::Simple qw/:block_flags/;
-     
- my $ipc = IPC::Fork::Simple->new();
+ 
+     use IPC::Fork::Simple qw/:block_flags/;
+ 
+     my $ipc = IPC::Fork::Simple->new();
      my $master_pid = $$;
      my $pid = fork();
      die 'stupid fork' unless defined $pid;
-     
- if ( $pid ) {
+ 
+     if ( $pid ) {
          $ipc->spawn_data_handler();
          my $child_connection_data;
-     
-     $ipc->collect_data_from_handler(1, BLOCK_UNTIL_DATA);
+ 
+         $ipc->collect_data_from_handler(1, BLOCK_UNTIL_DATA);
          $child_connection_data = $ipc->from_child( $pid, 'connection_info' )
-     
-     my $ipc2 = IPC::Fork::Simple->new_child( ${$child_connection_data} ) || die;
+ 
+         my $ipc2 = IPC::Fork::Simple->new_child( ${$child_connection_data} ) || die;
          $ipc2->to_master( 'master_test', 'a' x 300 );
      } else {
          $ipc->init_child();
-     
-     my $ipc2 = IPC::Fork::Simple->new();
+ 
+         my $ipc2 = IPC::Fork::Simple->new();
          $ipc2->spawn_data_handler();
          $ipc->to_master( 'connection_info', $ipc2->get_connection_info() ) || die $!;
          my $test;
-     
-     do {
+ 
+         do {
              sleep(0);
              $ipc2->collect_data_from_handler(1);
              $test = $ipc2->from_child( $master_pid, 'master_test' )
          } until ( $test );
-     
-     die unless length( ${$test} ) == 300;
+ 
+         die unless length( ${$test} ) == 300;
      }
 
+  Further examples
+    Further examples can be found in the t/functional directory supplied
+    with the distribution.
+
 NOTES
-  ZOMBIES
+  Zombies
     Child processes are not reaped automatically by this module, so the
     caller will need to call wait (or similar function) as usual to reap
     "child" processes.
 
-  SECURITY
+  Security
     This module creates a TCP listen socket on a random high-numbered port
     on 127.0.0.1. If a malicious program connects to that socket, it could
     cause the "master" process to hang waiting for that socket to
     disconnect. Resolving this issue is considered a "TODO".
 
-  INVALID CONNECTIONS
+  Invalid connections
     If someone connects, but does not send the proper data, it is possible
     that we could return from process_child_data with
     FLAG_PACKET_CHILD_DISCONNECTED but without updating any data or the
@@ -531,6 +535,13 @@ NOTES
     Callers checking for a return value of FLAG_PACKET_CHILD_DISCONNECTED
     should therefor also check finished_children to make sure a real "child"
     actually finished.
+
+  Unit tests
+    The module currently lacks unit tests but does have a collection of
+    functional tests. During "make test" these functional tests are not run,
+    as they can be system intensive. Ideally, unit tests will be developed
+    for this purpose, but until then they can be run by hand. They can be
+    found in the t/functional directory as part of the distribution.
 
 TO DO
     Implement protocol security to reject/expire lingering connections and
@@ -548,7 +559,12 @@ TO DO
     make the code more verbose in places. Merging the two hashes would also
     reduce data duplication of the symbolic name.
 
+    Add unit tests, or make functional tests run as part of "make test".
+
 CHANGES
+  1.46 - 20100830, jeagle
+    Version bump and repackage for CPAN.
+
   1.45 - 20100623, jeagle
     Clean and prepare for export to CPAN.
 

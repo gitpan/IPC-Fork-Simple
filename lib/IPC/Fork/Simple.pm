@@ -1530,23 +1530,27 @@ sub _do_finished_children_request {
      die unless length( ${$test} ) == 300;
  }
  
+=head2 Further examples
+
+Further examples can be found in the t/functional directory supplied with the
+distribution.
 
 =head1 NOTES
 
-=head2 ZOMBIES
+=head2 Zombies
 
 Child processes are not reaped automatically by this module, so the caller
 will need to call wait (or similar function) as usual to reap "child"
 processes.
 
-=head2 SECURITY
+=head2 Security
 
 This module creates a TCP listen socket on a random high-numbered port on
 127.0.0.1. If a malicious program connects to that socket, it could cause the
 "master" process to hang waiting for that socket to disconnect. Resolving this
 issue is considered a "TODO".
 
-=head2 INVALID CONNECTIONS
+=head2 Invalid connections
 
 If someone connects, but does not send the proper data, it is possible that we
 could return from L<process_child_data> with FLAG_PACKET_CHILD_DISCONNECTED
@@ -1555,6 +1559,14 @@ but without updating any data or the finished child list.
 Callers checking for a return value of FLAG_PACKET_CHILD_DISCONNECTED should
 therefor also check L<finished_children> to make sure a real "child" actually
 finished.
+
+=head2 Unit tests
+
+The module currently lacks unit tests but does have a collection of functional
+tests. During "make test" these functional tests are not run, as they can be
+system intensive. Ideally, unit tests will be developed for this purpose, but
+until then they can be run by hand. They can be found in the t/functional
+directory as part of the distribution.
 
 =head1 TO DO
 
@@ -1573,7 +1585,13 @@ removing the quick lookups against finished_children would make the code more
 verbose in places. Merging the two hashes would also reduce data duplication
 of the symbolic name.
 
+Add unit tests, or make functional tests run as part of "make test".
+
 =head1 CHANGES
+
+=head2 1.46 - 20100830, jeagle
+
+Version bump and repackage for CPAN.
 
 =head2 1.45 - 20100623, jeagle
 
