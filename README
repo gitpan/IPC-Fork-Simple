@@ -29,92 +29,92 @@ DESCRIPTION
 THEORY OF OPERATION
     The basic idea behind this module is to one or more forks to return data
     to their parent easily. This module divides a forking program into
-    "master", "child", and "other" forks. The "master" fork creates the
-    first IPC::Fork::Simple module and then calls fork() any number of
-    times. Any children created by the "master" will then call init_child to
-    specify their participation in the system. Child forks that do not call
-    init_child, prior forks that may have created the "master", or other
-    unrealted processes in the same process group, will be considered
-    "other" forks and will not have a role in the system.
+    "master", "child", and "other" forks. The master fork creates the first
+    IPC::Fork::Simple module and then calls fork() any number of times. Any
+    children created by the master will then call init_child to specify
+    their participation in the system. Child forks that do not call
+    init_child, prior forks that may have created the master, or other
+    unrealted processes in the same process group, will be considered other
+    forks and will not have a role in the system.
 
-    When a "child" is ready to send data to the "master", it must assign
-    that data a name by which it will be retrieved later by the "master".
-    When the "master" is ready to collect the data from a "child", it will
-    request that data by name and CID. Data passed from the "child" to the
-    "master" will be automatically serialized/unserialized by Storable, so
-    almost any data type can be transmitted, of up to 4 gigabytes in size.
+    When a child is ready to send data to the master, it must assign that
+    data a name by which it will be retrieved later by the master. When the
+    master is ready to collect the data from a child, it will request that
+    data by name and CID. Data passed from the child to the master will be
+    automatically serialized/unserialized by Storable, so almost any data
+    type can be transmitted, of up to 4 gigabytes in size.
 
-    Once a fork calls init_child, the "master" will then be able to track
-    the "child" fork, returning any data that is sent, and returning whether
-    or not the "child" has closed its connection with he "master".
+    Once a fork calls init_child, the master will then be able to track the
+    child fork, returning any data that is sent, and returning whether or
+    not the child has closed its connection with he master.
 
 USAGE
     There are three methods of use for IPC::Fork::Simple, each relating to
-    the actions taken by the "master" while the "children" are running.
+    the actions taken by the master while the children are running.
 
   Blocking Wait
     A single call to process_child_data with the appropriate BLOCK flag will
-    cause process_child_data to block until a "child" has disconnected. By
-    calling process_child_data once for each "child", all data from all
-    "children" can be collected easily. Using this method makes it hard for
-    the "master" process to do anything other than spawn and monitor
-    "children".
+    cause process_child_data to block until a child has disconnected. By
+    calling process_child_data once for each child, all data from all
+    children can be collected easily. Using this method makes it hard for
+    the master process to do anything other than spawn and monitor children.
 
   Polling
-    A call to process_child_data with a "false" parameter will cause
+    A call to process_child_data with a false parameter will cause
     process_child_data to only process pending data. If placed inside of a
-    loop, the "master" process can still gather data while it performs other
-    work. To determine when the "children" have ended the master can poll
+    loop, the master process can still gather data while it performs other
+    work. To determine when the children have ended the master can poll
     finished_children for the number and CIDs of children who have
-    disconnected. This method will allow the "master" to perform other tasks
-    while the "children" are running, but it will have to make periodic
+    disconnected. This method will allow the master to perform other tasks
+    while the children are running, but it will have to make periodic
     callbacks to process_child_data.
 
   Data Handler
-    Calling spawn_data_handler will cause the "master" to fork, and create a
+    Calling spawn_data_handler will cause the master to fork, and create a
     process which will automatially listen for and gather data from any
-    "children" spawned by the "master", either before or after the call to
-    spawn_data_handler. When the "master" is ready to collect the data from
-    the children, the "data handler" will copy all data to the "master" and
-    exit. To determine when a "child" has exited finished_children can be
+    children spawned by the master, either before or after the call to
+    spawn_data_handler. When the master is ready to collect the data from
+    the children, the data handler will copy all data to the master and
+    exit. To determine when a child has exited finished_children can be
     polled or the appropriate BLOCK flag can be passed to
-    collect_data_from_handler. This method completely frees up the "master"
-    to perform other tasks. This method uses less memory and performs faster
-    than the others for large numbers of forks or for "master" processes
-    that consume large amounts of memory.
+    collect_data_from_handler. This method completely frees up the master to
+    perform other tasks. This method uses less memory and performs faster
+    than the others for large numbers of forks or for master processes that
+    consume large amounts of memory.
 
   Notes
     It was previously documented that calling wait(2) (or a similar
-    function) to determine if a "child" had ended was valid. This will
-    correctly detect when a "child" has exited, but an immediate call to one
-    of the data or finished "child" retrieval functions may not return that
-    "child's" data. The only way to be sure a "child's" data has been
-    received is to check finished_children or attempt to fetch the data.
+    function) to determine if a child had ended was valid. This will
+    correctly detect when a child has exited, but an immediate call to one
+    of the data or finished child retrieval functions may not return that
+    child's data. The only way to be sure a child's data has been received
+    is to check finished_children or attempt to fetch the data.
 
 CHILD IDENTIFICATION
-    Internally, "children" are identified by a "child id" number, or CID.
-    This number is guaranteed to be unique for each "child" (and is
-    currently implemented as an integer starting with 0).
+    Internally, children are identified by a child id number, or CID. This
+    number is guaranteed to be unique for each child (and is currently
+    implemented as an integer starting with 0).
 
-    "Child" processes also have a symbolic name used to identify themselves.
-    This name defaults to the "child's" PID, but can be changed. Symbolic
+    Child processes also have a symbolic name used to identify themselves.
+    This name defaults to the child's PID, but can be changed. Symbolic
     names can be re-used, and attempting to access data by symbolic name
     after a symbolic name has been re-used will return the data from one of
-    the "children" at random. It is recommended that the symbolic name be
+    the children at random. It is recommended that the symbolic name be
     unique, but it is not required. PIDs are not guaranteed to be unique.
     See from_cid and NOTES for details.
 
-    finished_children will return a list of "children" who have ended, and
-    running_children will do the same for "children" who have called
+    finished_children will return a list of children who have ended, and
+    running_children will do the same for children who have called
     init_child but not yet ended.
 
 EXPORTS
     By default, nothing is exported by IPC::Fork::Simple. Two tags are
-    available to export specific flags.
+    available to export specific flags. Helper functions can be exported by
+    their name.
 
   :packet_flags
     FLAG_PACKET flags are used to describe the reason process_child_data has
-    returned, and generally describing the the last action by a "child".
+    returned, and generally describing the the last action by a child.
 
     Note: Other flags, and thus other return values, do exist, however they
     should never be returned to the caller unless due to a bug in
@@ -126,13 +126,13 @@ EXPORTS
     were pending.
 
    FLAG_PACKET_CHILD_DISCONNECTED
-    A "child" has ended (successfully or otherwise).
+    A child has ended (successfully or otherwise).
 
    FLAG_PACKET_DATA
-    A "child" has sent data and it has been successfully received.
+    A child has sent data and it has been successfully received.
 
    FLAG_PACKET_CHILD_HELLO
-    A "child" has called init_child.
+    A child has called init_child.
 
   :block_flags
     Block flags define different blocking methods for calls to
@@ -143,18 +143,18 @@ EXPORTS
     returns.
 
     Note: Technically, it is possible for this flag to block. For example,
-    if a "child" sends partial data, the call will block until the rest of
-    the data is received. These cases should be extremely rare.
+    if a child sends partial data, the call will block until the rest of the
+    data is received. These cases should be extremely rare.
 
    BLOCK_UNTIL_CHILD
-    Blocks until a "child" disconnects.
+    Blocks until a child disconnects.
 
     Note: This flag will cause a return in other cases which are only used
     internally, however it's possible a bug may cause a process_child_data
     to return to the caller under other conditions.
 
    BLOCK_UNTIL_DATA
-    Blocks until a "child" returns data or disconnects. The notes for
+    Blocks until a child returns data or disconnects. The notes for
     BLOCK_UNTIL_CHILD apply here too (as this is simply a superset of
     BLOCK_UNTIL_CHILD).
 
@@ -165,10 +165,10 @@ METHODS
 
   new_child
     Constructor for an IPC::Fork::Simple child-only object, used for bi-
-    directional with a "master".
+    directional with a master.
 
-    The first parameter is an opaque value containing "master" connection
-    info as returned by get_connection_info on an existing IPC::Fork::Simple
+    The first parameter is an opaque value containing master connection info
+    as returned by get_connection_info on an existing IPC::Fork::Simple
     object.
 
     The second, optional, parameter is a symbolic name for this process. See
@@ -176,51 +176,51 @@ METHODS
     defaults to the process ID.
 
   spawn_data_handler
-    Only usable by the "master".
+    Only usable by the master.
 
-    Runs the parent in "data hander" mode (see above). Causes the caller to
+    Runs the parent in data hander mode (see above). Causes the caller to
     fork(), which may be undesirable in some circumstances. Calls die() on
     failure.
 
   collect_data_from_handler
-    Only usable by the "master" when using the "data handler" method.
+    Only usable by the master when using the data handler method.
 
-    When using the "data hander" method of operation (see above), this
-    function will cause the "data hander" fork to return all data it has
-    received from "children" to the "master" and will cause the "data
-    hander" to clear its cache of "child" data.
+    When using the data hander method of operation (see above), this
+    function will cause the data hander fork to return all data it has
+    received from children to the master and will cause the data hander to
+    clear its cache of child data.
 
-    The first, optional, parameter defines whether or not the "data handler"
+    The first, optional, parameter defines whether or not the data handler
     should stay running after returning all data. For backwards
     compatibility, the default (false) is to exit after collecting all data.
 
-    If this parameter is set to true, the "data handler" will not exit after
+    If this parameter is set to true, the data handler will not exit after
     the data is sent, allowing the caller to collect data again at a later
     time.
 
-    If this parameter is set to false, no more "child" processes will be
-    able to send data back to the "master", as the "data handler" will have
-    exited. This should only be called after all "children" have ended.
+    If this parameter is set to false, no more child processes will be able
+    to send data back to the master, as the data handler will have exited.
+    This should only be called after all children have ended.
 
     The second, optional, parameter is one of the BLOCK flags, as used by
     process_child_data. See EXAMPLES for details on the meaning of these
     flags.
 
   init_child
-    Only usable by a "child".
+    Only usable by a child.
 
-    Only to be called by a "child" after a fork, this method configured this
-    "child" for communication with the "master" (or "data handler"). Will
-    die on failure.
+    Only to be called by a child after a fork, this method configured this
+    child for communication with the master (or data handler). Will die on
+    failure.
 
-    The first, optional, parameter is a symbolic name for this "child" with
-    which the "master" can retrieve data. Each child will automatically be
+    The first, optional, parameter is a symbolic name for this child with
+    which the master can retrieve data. Each child will automatically be
     assigned a unique id (cid), but the optional symbolic name can be used
     to simplify development. If not set, the symbolic name will be set to
     the process ID. The symbolic name can not be a zero-length string.
 
     Note: If a symbolic name is re-used, fetching data by symbolic name will
-    fetch data for one randomly chosen "child" that shares that name. If
+    fetch data for one randomly chosen child that shares that name. If
     symbolic names will be re-used, it's suggested that data is fetched
     instead by cid.
 
@@ -231,56 +231,56 @@ METHODS
     child processes by cid instead.
 
   to_master
-    Only usable by a "child".
+    Only usable by a child.
 
-    Sends data to the "master" (or "data handler"). Takes two parameters,
-    the first a string, used as a symbolic name for the data by which it
-    will be retrieved. The second parameter is the data (a scalar) that
-    should be sent. Data can be in any format understandable by Storable,
-    however since this data is sent between forks, data containing
-    filehandles should not be passed.
+    Sends data to the master (or data handler). Takes two parameters, the
+    first a string, used as a symbolic name for the data by which it will be
+    retrieved. The second parameter is the data (a scalar) that should be
+    sent. Data can be in any format understandable by Storable, however
+    since this data is sent between forks, data containing filehandles
+    should not be passed.
 
   push_to_master
-    Only usable by a "child".
+    Only usable by a child.
 
-    Pushes data into a queue sent to the "master". Unlike to_master, data
-    sent with push_to_master is not overwritten, but appended to, much like
-    when working with an array. Function semantics are otherwise identical
-    to to_master.
+    Pushes data into a queue sent to the master. Unlike to_master, data sent
+    with push_to_master is not overwritten, but appended to, much like when
+    working with an array. Function semantics are otherwise identical to
+    to_master.
 
     The first parameter is the symbolic name for the data, and the second is
     a reference to the data that will be sent.
 
   from_cid
-    Only usable by the "master".
+    Only usable by the master.
 
-    Retrieves data from a "child" after the "child" has sent it. Takes two
+    Retrieves data from a child after the child has sent it. Takes two
     parameters, the first is the cid from which the data was sent, and the
-    second is a symbolic name (a string) for the data, which the "child"
+    second is a symbolic name (a string) for the data, which the child
     specified when the data was sent.
 
     Returns nothing if no data is available, or a reference to whatever data
-    the "child" sent. Note: You may need to use ref() in order to determine
+    the child sent. Note: You may need to use ref() in order to determine
     the type of the data sent.
 
   from_child
-    Only usable by the "master".
+    Only usable by the master.
 
     Semantics are the same as from_cid, but searches by symbolic name
     instead of cid.
 
   pop_from_cid
-    Only usable by the "master".
+    Only usable by the master.
 
-    Retrieves pushed data from a "child" after the "child" has sent it.
-    Takes two parameters, the first is the cid from which the data was sent,
-    and the second is a symbolic name (a string) for the data, which the
-    "child" specified when the data was sent.
+    Retrieves pushed data from a child after the child has sent it. Takes
+    two parameters, the first is the cid from which the data was sent, and
+    the second is a symbolic name (a string) for the data, which the child
+    specified when the data was sent.
 
     Called in scalar context, returns nothing if no data is available, or a
-    reference to the oldest data the "child" pushed. Called in array
-    context, returns an empty array if no data is available, or an array of
-    references to the data pushed by the "child", ordered oldest to most
+    reference to the oldest data the child pushed. Called in array context,
+    returns an empty array if no data is available, or an array of
+    references to the data pushed by the child, ordered oldest to most
     recent.
 
     After the data is returned, it is removed from the internal list, so a
@@ -289,77 +289,107 @@ METHODS
     data sent.
 
   pop_from_child
-    Only usable by the "master".
+    Only usable by the master.
 
     Semantics are the same as from_cid, but searches by symbolic name
     instead of cid.
 
   finished_children
-    Only usable by the "master".
+    Only usable by the master.
 
-    In scalar context, returns the number of "children" who have finished.
+    In scalar context, returns the number of children who have finished.
 
     In array contaxt and the first, optional, parameter is true, returns a
-    hash of cid-to-symbolic name mappings for these "children". If the first
+    hash of cid-to-symbolic name mappings for these children. If the first
     parameter is not set, or is false, returns a list of CIDs that have
     finished.
 
   running_children
-    Only usable by the "master".
+    Only usable by the master.
 
-    In scalar context, returns the number of "children" who have called
+    In scalar context, returns the number of children who have called
     init_child but have not yet ended.
 
     In array contaxt and the first, optional, parameter is true, returns a
-    hash of cid-to-symbolic name mappings for these "children". If the first
+    hash of cid-to-symbolic name mappings for these children. If the first
     parameter is not set, or is false, returns a list of CIDs that have not
     yet finished.
 
   process_child_data
-    Only usable by the "master" when using the "blocking wait" and "polling"
+    Only usable by the master when using the blocking wait and polling
     methods.
 
-    Processes data from all "children". Takes a single parameter, a BLOCK
-    flag that determines if, and how, process_child_data should block. See
-    the EXPORTS section for details on these flags.
+    Processes data from all children. Takes a single parameter, a BLOCK flag
+    that determines if, and how, process_child_data should block. See the
+    EXPORTS section for details on these flags.
 
     child_data and finished_children can be called between calls to
     process_child_data, but there is no guarantee there will be any data
     available.
 
-    If process_child_data is not called often or fast enough, "children"
-    will be forced to block on calls to to_master, and data loss is
-    possible.
+    If process_child_data is not called often or fast enough, children will
+    be forced to block on calls to to_master, and data loss is possible.
 
-    Returns a FLAG_PACKET flag describing the last "child" action. See the
+    Returns a FLAG_PACKET flag describing the last child action. See the
     EXPORTS section for details on these flags.
 
   clear_finished_children
-    Only usable by the "master".
+    Only usable by the master.
 
-    Deletes the "master's" copy of the list of "children" who have ended. If
-    a "data handler" is being used, its copy of the list is not affected.
+    Deletes the master's copy of the list of children who have ended. If a
+    data handler is being used, its copy of the list is not affected.
 
-    The only optional parameter is the list of "child" PIDs to remove data
-    for. If specified, only the entries for those specified "children" will
-    be removed. If no list is passed, then all data will be cleared.
+    The only optional parameter is the list of child PIDs to remove data
+    for. If specified, only the entries for those specified children will be
+    removed. If no list is passed, then all data will be cleared.
 
   clear_child_data
-    Only usable by the "master".
+    Only usable by the master.
 
-    Deletes the "master's" copy of the data (standard and enqueued)
-    "children" who have ended. If a "data handler" is being used, its copy
-    of the lists are not affected.
+    Deletes the master's copy of the data (standard and enqueued) children
+    who have ended. If a data handler is being used, its copy of the lists
+    are not affected.
 
-    The only optional parameter is the list of "child" PIDs to remove data
-    for. If specified, only the entries for those specified "children" will
-    be removed. If no list is passed, then all data will be cleared.
+    The only optional parameter is the list of child PIDs to remove data
+    for. If specified, only the entries for those specified children will be
+    removed. If no list is passed, then all data will be cleared.
 
   get_connection_info
-    Only usable by the "master".
+    Only usable by the master.
 
     Retrieves an opaque value representing connection data for this object
-    (or its "data handler"). Only useful to pass into new_child.
+    (or its data handler). Only useful to pass into new_child.
+
+  get_waitable_fds
+    Only usable by the master.
+
+    Returns an array of any waitable/important filehandles. Useful if the
+    caller wants to implement his own loop and only call IPC::Fork::Simple
+    methods when there is data waiting for IPC::Fork::Simple. The caller
+    could select on the list of returned handles here and if one is
+    readable, then call the appropriate IPC::Fork::Simple method and to
+    allow the module to handle its data.
+
+USEFUL FUNCTIONS
+    Included with IPC::Fork::Simple are some helpful functions. These are
+    not exported by default. Note, these are not methods, they are standard
+    functions. They must be called directly and not as methods on an
+    IPC::Fork::Simple object.
+
+  partition_list
+    Partitions a list of length L into N pieces as evenly as possible. If
+    even partitioning is not possible, the first L % N elements will be one
+    element larger than the rest.
+
+    The first parameter is the number of partitions (N), the second is an
+    array reference to the data to partition. An array of N array references
+    will be returned. If this value is <= 1, a single element array
+    containing a copy of the list is returned.
+
+    Example:
+
+     @r = partition_list( 3, [1..10] );
+     # @r is now: [ 1, 2, 3, 4 ], [ 5, 6, 7 ], [ 8, 9, 10 ]
 
 EXAMPLES
   Data Handler
@@ -415,7 +445,7 @@ EXAMPLES
      my $pid = fork();
  
      if ( $pid ) {
-         while ( ! $ipc->finished_children() ) {
+         while ( !$ipc->finished_children() ) {
              $ipc->process_child_data(0);
              waitpid( -1, WNOHANG );
              sleep(0);
@@ -518,22 +548,26 @@ NOTES
   Zombies
     Child processes are not reaped automatically by this module, so the
     caller will need to call wait (or similar function) as usual to reap
-    "child" processes.
+    child processes.
 
   Security
     This module creates a TCP listen socket on a random high-numbered port
     on 127.0.0.1. If a malicious program connects to that socket, it could
-    cause the "master" process to hang waiting for that socket to
-    disconnect. Resolving this issue is considered a "TODO".
+    cause the master process to hang waiting for that socket to disconnect.
+    This module takes basic steps to insure this does not happen (connecting
+    clients must present the correct 32-bit key within 30 seconds of
+    connecting, but this is only checked when another client connects), but
+    this is not fool-proof.
 
   Invalid connections
     If someone connects, but does not send the proper data, it is possible
     that we could return from process_child_data with
     FLAG_PACKET_CHILD_DISCONNECTED but without updating any data or the
-    finished child list.
+    finished child list. I believe all possible causes of this have been
+    resolved, but developers should still be aware of this potential issue.
 
     Callers checking for a return value of FLAG_PACKET_CHILD_DISCONNECTED
-    should therefor also check finished_children to make sure a real "child"
+    should therefor also check finished_children to make sure a real child
     actually finished.
 
   Unit tests
@@ -544,14 +578,6 @@ NOTES
     found in the t/functional directory as part of the distribution.
 
 TO DO
-    Implement protocol security to reject/expire lingering connections and
-    connections that do not send a HELLO.
-
-    Return better information for clients that connect and disconnect but
-    send no data (currently, we return with FLAG_PACKET_CHILD_DISCONNECTED
-    but don't update internal state, so a caller checking for that updated
-    internal state could get confused.)
-
     Merge the internal finished_children hash with the internal child_info
     hash. The child_info hash already holds most of the data, a flag to
     determine whether or not that child is still connected would be simple
@@ -562,6 +588,12 @@ TO DO
     Add unit tests, or make functional tests run as part of "make test".
 
 CHANGES
+  1.47 - 20110622, jeagle
+    Implement basic integrity checks to prevent unexpected connections from
+    interfering with normal operation.
+
+    Add partition_list function, get_waitable_fds method.
+
   1.46 - 20100830, jeagle
     Version bump and repackage for CPAN.
 

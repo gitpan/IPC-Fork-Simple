@@ -34,97 +34,97 @@ supports one-way communication, from the child to the parent.
 
 The basic idea behind this module is to one or more forks to return data to
 their parent easily. This module divides a forking program into "master",
-"child", and "other" forks. The "master" fork creates the first
+"child", and "other" forks. The master fork creates the first
 IPC::Fork::Simple module and then calls fork() any number of times. Any
-children created by the "master" will then call L<init_child> to specify
+children created by the master will then call L<init_child> to specify
 their participation in the system. Child forks that do not call L<init_child>,
-prior forks that may have created the "master", or other unrealted processes
-in the same process group, will be considered "other" forks and will not have
+prior forks that may have created the master, or other unrealted processes
+in the same process group, will be considered other forks and will not have
 a role in the system.
 
-When a "child" is ready to send data to the "master", it must assign that data
-a name by which it will be retrieved later by the "master". When the "master"
-is ready to collect the data from a "child", it will request that data by name
-and CID. Data passed from the "child" to the "master" will be automatically
+When a child is ready to send data to the master, it must assign that data
+a name by which it will be retrieved later by the master. When the master
+is ready to collect the data from a child, it will request that data by name
+and CID. Data passed from the child to the master will be automatically
 serialized/unserialized by L<Storable>, so almost any data type can be
 transmitted, of up to 4 gigabytes in size.
 
-Once a fork calls L<init_child>, the "master" will then be able to track the
-"child" fork, returning any data that is sent, and returning whether or not
-the "child" has closed its connection with he "master".
+Once a fork calls L<init_child>, the master will then be able to track the
+child fork, returning any data that is sent, and returning whether or not
+the child has closed its connection with he master.
 
 =head1 USAGE
 
 There are three methods of use for IPC::Fork::Simple, each relating to the 
-actions taken by the "master" while the "children" are running.
+actions taken by the master while the children are running.
 
 =head2 Blocking Wait
 
 A single call to L<process_child_data> with the appropriate BLOCK flag will
-cause L<process_child_data> to block until a "child" has disconnected. By
-calling L<process_child_data> once for each "child", all data from all
-"children" can be collected easily. Using this method makes it hard for the
-"master" process to do anything other than spawn and monitor "children".
+cause L<process_child_data> to block until a child has disconnected. By
+calling L<process_child_data> once for each child, all data from all
+children can be collected easily. Using this method makes it hard for the
+master process to do anything other than spawn and monitor children.
 
 =head2 Polling
 
-A call to L<process_child_data> with a "false" parameter will cause
+A call to L<process_child_data> with a false parameter will cause
 L<process_child_data> to only process pending data. If placed inside of a
-loop, the "master" process can still gather data while it performs other work.
-To determine when the "children" have ended the master can poll
+loop, the master process can still gather data while it performs other work.
+To determine when the children have ended the master can poll
 L<finished_children> for the number and CIDs of children who have disconnected.
-This method will allow the "master" to perform other tasks while the "children"
+This method will allow the master to perform other tasks while the children
 are running, but it will have to make periodic callbacks to
 L<process_child_data>.
 
 =head2 Data Handler
 
-Calling L<spawn_data_handler> will cause the "master" to fork, and create a
-process which will automatially listen for and gather data from any "children"
-spawned by the "master", either before or after the call to L<spawn_data_handler>.
-When the "master" is ready to collect the data from the children, the "data
-handler" will copy all data to the "master" and exit. To determine when a
-"child" has exited L<finished_children> can be polled or the appropriate BLOCK
-flag can be passed to L<collect_data_from_handler>. This method completely
-frees up the "master" to perform other tasks. This method uses less memory and
-performs faster than the others for large numbers of forks or for "master"
-processes that consume large amounts of memory.
+Calling L<spawn_data_handler> will cause the master to fork, and create a
+process which will automatially listen for and gather data from any children
+spawned by the master, either before or after the call to L<spawn_data_handler>.
+When the master is ready to collect the data from the children, the data handler
+will copy all data to the master and exit. To determine when a child has exited
+L<finished_children> can be polled or the appropriate BLOCK flag can be passed
+to L<collect_data_from_handler>. This method completely frees up the master to
+perform other tasks. This method uses less memory and performs faster than the
+others for large numbers of forks or for master processes that consume large
+amounts of memory.
 
 =head2 Notes
 
 It was previously documented that calling wait(2) (or a similar function) to
-determine if a "child" had ended was valid. This will correctly detect when a
-"child" has exited, but an immediate call to one of the data or finished
-"child" retrieval functions may not return that "child's" data. The only way
-to be sure a "child's" data has been received is to check L<finished_children>
+determine if a child had ended was valid. This will correctly detect when a
+child has exited, but an immediate call to one of the data or finished
+child retrieval functions may not return that child's data. The only way
+to be sure a child's data has been received is to check L<finished_children>
 or attempt to fetch the data.
 
 =head1 CHILD IDENTIFICATION
 
-Internally, "children" are identified by a "child id" number, or CID. This
-number is guaranteed to be unique for each "child" (and is currently
+Internally, children are identified by a child id number, or CID. This
+number is guaranteed to be unique for each child (and is currently
 implemented as an integer starting with 0).
 
-"Child" processes also have a symbolic name used to identify themselves. This
-name defaults to the "child's" PID, but can be changed. Symbolic names can be
+Child processes also have a symbolic name used to identify themselves. This
+name defaults to the child's PID, but can be changed. Symbolic names can be
 re-used, and attempting to access data by symbolic name after a symbolic name
-has been re-used will return the data from one of the "children" at random. It
+has been re-used will return the data from one of the children at random. It
 is recommended that the symbolic name be unique, but it is not required. PIDs
 are not guaranteed to be unique. See L<from_cid> and L<NOTES> for details.
 
-L<finished_children> will return a list of "children" who have ended, and
-L<running_children> will do the same for "children" who have called
+L<finished_children> will return a list of children who have ended, and
+L<running_children> will do the same for children who have called
 L<init_child> but not yet ended.
 
 =head1 EXPORTS
 
 By default, nothing is exported by IPC::Fork::Simple. Two tags are available
-to export specific flags.
+to export specific flags. Helper functions can be exported by their name.
 
 =head2 :packet_flags
 
 FLAG_PACKET flags are used to describe the reason L<process_child_data> has
-returned, and generally describing the the last action by a "child".
+returned, and generally describing the the last action by a child.
 
 Note: Other flags, and thus other return values, do exist, however they should
 never be returned to the caller unless due to a bug in IPC::Fork::Simple.
@@ -136,15 +136,15 @@ is called without blocking, but no data or events were pending.
 
 =head3 FLAG_PACKET_CHILD_DISCONNECTED
 
-A "child" has ended (successfully or otherwise).
+A child has ended (successfully or otherwise).
 
 =head3 FLAG_PACKET_DATA
 
-A "child" has sent data and it has been successfully received.
+A child has sent data and it has been successfully received.
 
 =head3 FLAG_PACKET_CHILD_HELLO
 
-A "child" has called L<init_child>.
+A child has called L<init_child>.
 
 =head2 :block_flags
 
@@ -156,12 +156,12 @@ L<process_child_data>. See L<process_child_data> for details.
 Never blocks. Processes all available data on the socket and then returns.
 
 Note: Technically, it is possible for this flag to block. For example, if a
-"child" sends partial data, the call will block until the rest of the data is
+child sends partial data, the call will block until the rest of the data is
 received. These cases should be extremely rare.
 
 =head3 BLOCK_UNTIL_CHILD
 
-Blocks until a "child" disconnects.
+Blocks until a child disconnects.
 
 Note: This flag will cause a return in other cases which are only used
 internally, however it's possible a bug may cause a L<process_child_data> to
@@ -169,7 +169,7 @@ return to the caller under other conditions.
 
 =head3 BLOCK_UNTIL_DATA
 
-Blocks until a "child" returns data or disconnects. The notes for
+Blocks until a child returns data or disconnects. The notes for
 BLOCK_UNTIL_CHILD apply here too (as this is simply a superset of
 BLOCK_UNTIL_CHILD).
 
@@ -185,7 +185,8 @@ use Carp;
 use Socket;
 
 use constant 1.01;
-use constant DEBUG => 0;
+use constant DEBUG                      => 0;
+use constant CLIENT_AUTHENTICATION_TIME => 30;    # seconds
 
 if ( DEBUG ) {
     require Data::Dumper;
@@ -195,7 +196,7 @@ if ( DEBUG ) {
 }
 
 use vars qw( $VERSION );
-$VERSION = 1.45;
+$VERSION = 1.47;
 
 if ( DEBUG ) {
     $SIG{__WARN__} = sub { warn "$$ " . shift; };
@@ -230,9 +231,9 @@ use constant HEADER_FINISHED_EACH_PACKING         => 'NcN';
 use constant HEADER_HANDLER_DATA_ADDITIONAL_SIZE => 16;
 use constant HEADER_HANDLER_DATA_PACKING         => 'NNNN';
 
-# Symbolic name length (4 bytes).
-use constant HEADER_CHILD_HELLO_ADDITIONAL_SIZE => 4;
-use constant HEADER_CHILD_HELLO_PACKING         => 'N';
+# Shared key, symbolic name length (4 bytes).
+use constant HEADER_CHILD_HELLO_ADDITIONAL_SIZE => 8;
+use constant HEADER_CHILD_HELLO_PACKING         => 'NN';
 
 # Constants used to define the type of packet being sent. FLAG_PACKET_* values
 # occupy the bottom 4 bits of the "flags" byte, while FLAG_DATA_* values have
@@ -299,12 +300,12 @@ use constant BLOCK_UNTIL_DATA  => 2;
 
 {
     my @packet_flags = map { /::([^:]+)$/; $1 }
-        grep( /^IPC::Fork::Simple::FLAG_PACKET_/, keys( %constant::declared ) );
-    my @block_flags  = map { /::([^:]+)$/; $1 }
-        grep( /^IPC::Fork::Simple::BLOCK/,        keys( %constant::declared ) );
+     grep( /^IPC::Fork::Simple::FLAG_PACKET_/, keys( %constant::declared ) );
+    my @block_flags = map { /::([^:]+)$/; $1 }
+     grep( /^IPC::Fork::Simple::BLOCK/, keys( %constant::declared ) );
 
     @ISA = ( 'Exporter' );
-    @EXPORT_OK = ( @packet_flags, @block_flags );
+    @EXPORT_OK = ( 'partition_list', @packet_flags, @block_flags );
 
     %EXPORT_TAGS = (
         'packet_flags' => [@packet_flags],
@@ -324,11 +325,12 @@ sub ASSERT ($) {
 sub _new_defaults {
     my ( $self ) = @_;
 
-    $self->{'child_info'}        = {};
-    $self->{'is_child'}          = 0;
-    $self->{'finished_children'} = {};
-    $self->{'socket_to_cid'}     = {};
-    $self->{'next_cid'}          = 0;
+    $self->{'child_info'}              = {};
+    $self->{'is_child'}                = 0;
+    $self->{'finished_children'}       = {};
+    $self->{'socket_to_cid'}           = {};
+    $self->{'next_cid'}                = 0;
+    $self->{'unauthenticated_clients'} = {};
 
     # Don't really need these here, they're just for my own knowledge.
     $self->{'handler_port'}         = undef;
@@ -366,6 +368,7 @@ sub new {
         die "Failed to create IO::Select object!";
     }
     $self->{'master_port'} = $self->{'master_socket'}->sockport() || die $!;
+    $self->{'shared_key'} = int( rand( 0xFFFFFFFF ) );
 
     return $self;
 }
@@ -373,9 +376,9 @@ sub new {
 =head2 new_child
 
 Constructor for an IPC::Fork::Simple child-only object, used for bi-
-directional with a "master".
+directional with a master.
 
-The first parameter is an opaque value containing "master" connection info as
+The first parameter is an opaque value containing master connection info as
 returned by L<get_connection_info> on an existing IPC::Fork::Simple object.
 
 The second, optional, parameter is a symbolic name for this process. See
@@ -397,6 +400,7 @@ sub new_child {
 
     $self->{'master_ip'}   = $connection_info->{'ip'};
     $self->{'master_port'} = $connection_info->{'port'};
+    $self->{'shared_key'}  = $connection_info->{'shared_key'};
     return unless $self->init_child( $symbolic );
 
     return $self;
@@ -404,9 +408,9 @@ sub new_child {
 
 =head2 spawn_data_handler
 
-Only usable by the "master".
+Only usable by the master.
 
-Runs the parent in "data hander" mode (see above). Causes the caller to
+Runs the parent in data hander mode (see above). Causes the caller to
 fork(), which may be undesirable in some circumstances. Calls die() on failure.
 
 =cut
@@ -502,10 +506,10 @@ sub spawn_data_handler {
                     length( $source_symbolic_name ),
                     length( $data_name ),
                     length( ${$data} )
-                )
-                . $source_symbolic_name
-                . $data_name
-                . ${$data}
+                 )
+                 . $source_symbolic_name
+                 . $data_name
+                 . ${$data}
             ) || die "Failed to send data to master: $!";
 
             return 0 unless $r;
@@ -517,7 +521,8 @@ sub spawn_data_handler {
         $self->{'handler_child_socket'} = IO::Socket::INET->new(
             Type     => SOCK_STREAM,
             PeerAddr => $self->{'handler_ip'},
-            PeerPort => $self->{'handler_port'} );
+            PeerPort => $self->{'handler_port'}
+        );
         if ( !$self->{'handler_child_socket'} ) {
             die "Failed to create client socket to " . $self->{'handler_port'} . ": $!";
         }
@@ -624,23 +629,23 @@ sub spawn_data_handler {
 
 =head2 collect_data_from_handler
 
-Only usable by the "master" when using the "data handler" method.
+Only usable by the master when using the data handler method.
 
-When using the "data hander" method of operation (see above), this function
-will cause the "data hander" fork to return all data it has received from
-"children" to the "master" and will cause the "data hander" to clear its cache
-of "child" data.
+When using the data hander method of operation (see above), this function
+will cause the data hander fork to return all data it has received from
+children to the master and will cause the data hander to clear its cache
+of child data.
 
-The first, optional, parameter defines whether or not the "data handler"
+The first, optional, parameter defines whether or not the data handler
 should stay running after returning all data. For backwards compatibility, the
 default (false) is to exit after collecting all data.
 
-If this parameter is set to true, the "data handler" will not exit after the
+If this parameter is set to true, the data handler will not exit after the
 data is sent, allowing the caller to collect data again at a later time.
 
-If this parameter is set to false,  no more "child" processes will be able to
-send data back to the "master", as the "data handler" will have exited. This
-should only be called after all "children" have ended.
+If this parameter is set to false,  no more child processes will be able to
+send data back to the master, as the data handler will have exited. This
+should only be called after all children have ended.
 
 The second, optional, parameter is one of the BLOCK flags, as used by
 L<process_child_data>. See EXAMPLES for details on the meaning of these flags.
@@ -687,20 +692,19 @@ sub collect_data_from_handler {
 
 =head2 init_child
 
-Only usable by a "child".
+Only usable by a child.
 
-Only to be called by a "child" after a fork, this method configured this
-"child" for communication with the "master" (or "data handler"). Will die on
-failure.
+Only to be called by a child after a fork, this method configured this
+child for communication with the master (or data handler). Will die on failure.
 
-The first, optional, parameter is a symbolic name for this "child" with which
-the "master" can retrieve data. Each child will automatically be assigned a
+The first, optional, parameter is a symbolic name for this child with which
+the master can retrieve data. Each child will automatically be assigned a
 unique id (cid), but the optional symbolic name can be used to simplify
 development. If not set, the symbolic name will be set to the process ID. The
 symbolic name can not be a zero-length string.
 
 Note: If a symbolic name is re-used, fetching data by symbolic name will fetch
-data for one randomly chosen "child" that shares that name. If symbolic names
+data for one randomly chosen child that shares that name. If symbolic names
 will be re-used, it's suggested that data is fetched instead by cid.
 
 Be aware that PIDs, the default symbolic name, may be re-used on a system,
@@ -736,22 +740,23 @@ sub init_child {
         pack(
             HEADER_PACKING . HEADER_CHILD_HELLO_PACKING,    # Packing
             FLAG_PACKET_CHILD_HELLO,
+            $self->{'shared_key'},
             length( $self->{'symbolic_name'} )
-        )
-        . $self->{'symbolic_name'}
+         )
+         . $self->{'symbolic_name'}
     ) || die "Failed to send data to master: $!";
     return 1;
 }
 
 =head2 to_master
 
-Only usable by a "child".
+Only usable by a child.
 
-Sends data to the "master" (or "data handler"). Takes two parameters, the
-first a string, used as a symbolic name for the data by which it will be
-retrieved. The second parameter is the data (a scalar) that should be sent.
-Data can be in any format understandable by L<Storable>, however since this
-data is sent between forks, data containing filehandles should not be passed.
+Sends data to the master (or data handler). Takes two parameters, the first a
+string, used as a symbolic name for the data by which it will be retrieved. The
+second parameter is the data (a scalar) that should be sent.  Data can be in any
+format understandable by L<Storable>, however since this data is sent between
+forks, data containing filehandles should not be passed.
 
 =cut
 
@@ -765,12 +770,11 @@ sub to_master {
 
 =head2 push_to_master
 
-Only usable by a "child".
+Only usable by a child.
 
-Pushes data into a queue sent to the "master". Unlike L<to_master>, data
-sent with L<push_to_master> is not overwritten, but appended to, much like
-when working with an array. Function semantics are otherwise identical to
-L<to_master>.
+Pushes data into a queue sent to the master. Unlike L<to_master>, data sent with
+L<push_to_master> is not overwritten, but appended to, much like when working
+with an array. Function semantics are otherwise identical to L<to_master>.
 
 The first parameter is the symbolic name for the data, and the second is a
 reference to the data that will be sent.
@@ -786,16 +790,15 @@ sub push_to_master {
 
 =head2 from_cid
 
-Only usable by the "master".
+Only usable by the master.
 
-Retrieves data from a "child" after the "child" has sent it. Takes two
-parameters, the first is the cid from which the data was sent, and the second
-is a symbolic name (a string) for the data, which the "child" specified when
-the data was sent.
+Retrieves data from a child after the child has sent it. Takes two parameters,
+the first is the cid from which the data was sent, and the second is a symbolic
+name (a string) for the data, which the child specified when the data was sent.
 
 Returns nothing if no data is available, or a reference to whatever data the
-"child" sent. Note: You may need to use ref() in order to determine the type
-of the data sent.
+child sent. Note: You may need to use ref() in order to determine the type of
+the data sent.
 
 =cut
 
@@ -812,10 +815,10 @@ sub from_cid {
 
 =head2 from_child
 
-Only usable by the "master".
+Only usable by the master.
 
-Semantics are the same as L<from_cid>, but searches by symbolic name
-instead of cid.
+Semantics are the same as L<from_cid>, but searches by symbolic name instead
+of cid.
 
 =cut
 
@@ -830,22 +833,21 @@ sub from_child {
 
 =head2 pop_from_cid
 
-Only usable by the "master".
+Only usable by the master.
 
-Retrieves pushed data from a "child" after the "child" has sent it. Takes two
-parameters, the first is the cid from which the data was sent, and the second
-is a symbolic name (a string) for the data, which the "child" specified when
-the data was sent.
+Retrieves pushed data from a child after the child has sent it. Takes two
+parameters, the first is the cid from which the data was sent, and the second is
+a symbolic name (a string) for the data, which the child specified when the data
+was sent.
 
 Called in scalar context, returns nothing if no data is available, or a
-reference to the oldest data the "child" pushed. Called in array context,
-returns an empty array if no data is available, or an array of references to
-the data pushed by the "child", ordered oldest to most recent.
+reference to the oldest data the child pushed. Called in array context, returns
+an empty array if no data is available, or an array of references to the data
+pushed by the child, ordered oldest to most recent.
 
 After the data is returned, it is removed from the internal list, so a
 subsequent call to L<pop_from_cid> will return the next oldest set of data.
-Note: You may need to use ref() in order to determine the type of the data
-sent.
+Note: You may need to use ref() in order to determine the type of the data sent.
 
 =cut
 
@@ -853,7 +855,7 @@ sub pop_from_cid {
     my ( $self, $cid, $name ) = @_;
     if (   ( $self->{'is_child'} )
         || ( !$self->{'child_info'}->{$cid} )
-        || ( !$self->{'child_info'}->{$cid}->{'data_queue'} ) 
+        || ( !$self->{'child_info'}->{$cid}->{'data_queue'} )
         || ( !$self->{'child_info'}->{$cid}->{'data_queue'}->{$name} ) )
     {
         return;
@@ -870,7 +872,7 @@ sub pop_from_cid {
 
 =head2 pop_from_child
 
-Only usable by the "master".
+Only usable by the master.
 
 Semantics are the same as L<from_cid>, but searches by symbolic name
 instead of cid.
@@ -895,13 +897,13 @@ sub pop_from_child {
 
 =head2 finished_children
 
-Only usable by the "master".
+Only usable by the master.
 
-In scalar context, returns the number of "children" who have finished.
+In scalar context, returns the number of children who have finished.
 
 In array contaxt and the first, optional, parameter is true, returns a hash of
-cid-to-symbolic name mappings for these "children". If the first parameter is
-not set, or is false, returns a list of CIDs that have finished.
+cid-to-symbolic name mappings for these children. If the first parameter is not
+set, or is false, returns a list of CIDs that have finished.
 
 =cut
 
@@ -927,13 +929,13 @@ sub finished_children {
 
 =head2 running_children
 
-Only usable by the "master".
+Only usable by the master.
 
-In scalar context, returns the number of "children" who have called
+In scalar context, returns the number of children who have called
 L<init_child> but have not yet ended.
 
 In array contaxt and the first, optional, parameter is true, returns a hash of
-cid-to-symbolic name mappings for these "children". If the first parameter is
+cid-to-symbolic name mappings for these children. If the first parameter is
 not set, or is false, returns a list of CIDs that have not yet finished.
 
 =cut
@@ -951,7 +953,7 @@ sub running_children {
 
     foreach my $cid ( keys( %{ $self->{'child_info'} } ) ) {
         if ( !exists $self->{'finished_children'} ) {
-            $running_children{ $cid } = $self->{'child_info'}->{'symbolic_name'};
+            $running_children{$cid} = $self->{'child_info'}->{'symbolic_name'};
         }
     }
 
@@ -968,10 +970,9 @@ sub running_children {
 
 =head2 process_child_data
 
-Only usable by the "master" when using the "blocking wait" and "polling"
-methods.
+Only usable by the master when using the blocking wait and polling methods.
 
-Processes data from all "children". Takes a single parameter, a BLOCK flag that
+Processes data from all children. Takes a single parameter, a BLOCK flag that
 determines if, and how, L<process_child_data> should block. See the EXPORTS
 section for details on these flags.
 
@@ -979,10 +980,10 @@ L<child_data> and L<finished_children> can be called between calls
 to process_child_data, but there is no guarantee there will be any data
 available.
 
-If L<process_child_data> is not called often or fast enough, "children" will be
+If L<process_child_data> is not called often or fast enough, children will be
 forced to block on calls to L<to_master>, and data loss is possible.
 
-Returns a FLAG_PACKET flag describing the last "child" action. See the EXPORTS
+Returns a FLAG_PACKET flag describing the last child action. See the EXPORTS
 section for details on these flags.
 
 =cut
@@ -996,14 +997,14 @@ sub process_child_data {
 
 =head2 clear_finished_children
 
-Only usable by the "master".
+Only usable by the master.
 
-Deletes the "master's" copy of the list of "children" who have ended. If a
-"data handler" is being used, its copy of the list is not affected.
+Deletes the master's copy of the list of children who have ended. If a data
+handler is being used, its copy of the list is not affected.
 
-The only optional parameter is the list of "child" PIDs to remove data for. If
-specified, only the entries for those specified "children" will be removed. If
-no list is passed, then all data will be cleared.
+The only optional parameter is the list of child PIDs to remove data for. If
+specified, only the entries for those specified children will be removed. If no
+list is passed, then all data will be cleared.
 
 =cut
 
@@ -1020,15 +1021,14 @@ sub clear_finished_children {
 
 =head2 clear_child_data
 
-Only usable by the "master".
+Only usable by the master.
 
-Deletes the "master's" copy of the data (standard and enqueued) "children" who
-have ended. If a "data handler" is being used, its copy of the lists are not
-affected.
+Deletes the master's copy of the data (standard and enqueued) children who have
+ended. If a data handler is being used, its copy of the lists are not affected.
 
-The only optional parameter is the list of "child" PIDs to remove data for. If
-specified, only the entries for those specified "children" will be removed. If
-no list is passed, then all data will be cleared.
+The only optional parameter is the list of child PIDs to remove data for. If
+specified, only the entries for those specified children will be removed. If no
+list is passed, then all data will be cleared.
 
 =cut
 
@@ -1045,10 +1045,10 @@ sub clear_child_data {
 
 =head2 get_connection_info
 
-Only usable by the "master".
+Only usable by the master.
 
 Retrieves an opaque value representing connection data for this object (or its
-"data handler"). Only useful to pass into L<new_child>.
+data handler). Only useful to pass into L<new_child>.
 
 =cut
 
@@ -1057,10 +1057,103 @@ sub get_connection_info {
 
     return if $self->{'is_child'};
 
-    return freeze( {
-            'port' => $self->{'master_port'},
-            'ip'   => $self->{'master_ip'},
-    } );
+    return freeze(
+        {
+            'port'       => $self->{'master_port'},
+            'ip'         => $self->{'master_ip'},
+            'shared_key' => $self->{'shared_key'},
+        }
+    );
+}
+
+=head2 get_waitable_fds
+
+Only usable by the master.
+
+Returns an array of any waitable/important filehandles. Useful if the caller
+wants to implement his own loop and only call IPC::Fork::Simple methods when
+there is data waiting for IPC::Fork::Simple. The caller could select on the
+list of returned handles here and if one is readable, then call the appropriate
+IPC::Fork::Simple method and to allow the module to handle its data.
+
+=cut
+
+sub get_waitable_fds {
+    my ( $self ) = @_;
+
+    return () if $self->{'is_child'};
+
+    if ( $self->{'is_handler_parent'} ) {
+        return $self->{'handler_select'}->handles();
+    } else {
+        return $self->{'master_select'}->handles();
+    }
+}
+
+### Exportable functions
+
+=head1 USEFUL FUNCTIONS
+
+Included with IPC::Fork::Simple are some helpful functions. These are not
+exported by default. Note, these are not methods, they are standard functions.
+They must be called directly and not as methods on an IPC::Fork::Simple object.
+
+=head2 partition_list
+
+Partitions a list of length L into N pieces as evenly as possible. If even
+partitioning is not possible, the first L % N elements will be one element
+larger than the rest.
+
+The first parameter is the number of partitions (N), the second is an array
+reference to the data to partition. An array of N array references will be
+returned. If this value is <= 1, a single element array containing a copy of
+the list is returned.
+
+Example:
+
+ @r = partition_list( 3, [1..10] );
+ # @r is now: [ 1, 2, 3, 4 ], [ 5, 6, 7 ], [ 8, 9, 10 ]
+
+=cut
+
+sub partition_list {
+    my ( $count, $list ) = @_;
+    die "Invalid parameters" if ref $count;
+    return ( [@{$list}] ) unless $count > 1;
+
+    my @final;
+    my $start = 0;
+    my $size_of_partition;
+    my $leftover;
+    my $i;
+
+    if ( $count < scalar( @{$list} ) ) {
+        $size_of_partition = int( scalar( @{$list} ) / $count );
+        $leftover          = scalar( @{$list} ) % $count;
+        if ( $leftover ) {
+            $size_of_partition++;
+        }
+    } else {
+        $size_of_partition = 1;
+    }
+
+    for ( $i = 0; $i < $count; $i++ ) {
+        if ( $start >= scalar( @{$list} ) ) {
+            $final[$i] = [];
+        } else {
+            # This is weird syntax for getting an array slice out of an arrayref.
+            $final[$i] = [@{$list}[$start .. $start + $size_of_partition - 1]];
+            $start += $size_of_partition;
+            if ( $leftover ) {
+                $leftover--;
+                if ( $leftover == 0 ) {
+                    $size_of_partition--;
+                }
+            }
+        }
+    }
+
+    return @final;
 }
 
 ### End of public methods, begin private stuff...
@@ -1079,8 +1172,8 @@ sub _data_to_socket {
     my $flags = ( FLAG_PACKET_DATA | $data_flags );
 
     my $r = $socket->send(
-        pack( HEADER_PACKING . HEADER_DATA_PACKING, $flags, length( $name ), length( $data ) ) . $name . $data ) ||
-        die "Failed to send data to socket: $!";
+        pack( HEADER_PACKING . HEADER_DATA_PACKING, $flags, length( $name ), length( $data ) ) . $name . $data )
+     || die "Failed to send data to socket: $!";
 
     return $r ? 1 : 0;
 }
@@ -1093,7 +1186,7 @@ sub _data_from_socket {
     my ( $self, $select, $block ) = @_;
     my $data;
 
-    my $sub_handle_bad_read = sub {
+    my $disconnect_client = sub {
         my ( $s ) = @_;
         $select->remove( $s );
         if ( defined $self->{'socket_to_cid'}->{$s} ) {
@@ -1107,23 +1200,28 @@ sub _data_from_socket {
             }
             delete $self->{'socket_to_cid'}->{$s};
         }
+        delete $self->{'unauthenticated_clients'}->{$s};
         $s->close();
     };
 
-    sub recv_x {
-        my ( $socket, $amount ) = @_;
-        my $received = '';
-        my $r;
-
-        while ( length( $received ) < $amount ) {
-            $socket->recv( $r, $amount - length( $received ) );
-            if ( ( !defined $r ) || ( length( $r ) == 0 ) ) {
-                return undef;
+    my $flush_unauthenticated_clients = sub {
+        my $start_ts = time();
+        while ( my ( $k, $v ) = each( %{ $self->{'unauthenticated_clients'} } ) ) {
+            if ( $start_ts > $v->{'ts'} + CLIENT_AUTHENTICATION_TIME ) {
+                $disconnect_client->( $v->{'socket'} );
             }
-            $received .= $r;
         }
-        return $received;
-    }
+    };
+
+    my $VALIDATE = sub {
+        my ( $s, $cond ) = @_;
+
+        if ( !$cond ) {
+            $disconnect_client->( $s );
+            return undef;
+        }
+        return 1;
+    };
 
     my $recv_more = sub {
         my ( $socket, $more ) = @_;
@@ -1133,7 +1231,7 @@ sub _data_from_socket {
             my $r;
             $socket->recv( $r, $more - length( $data ) );
             if ( ( !defined $r ) || ( length( $r ) == 0 ) ) {
-                $sub_handle_bad_read->( $socket );
+                $disconnect_client->( $socket );
                 return undef;
             }
             $data .= $r;
@@ -1141,7 +1239,7 @@ sub _data_from_socket {
 
         # Not necessary, but we can keep it in case something goes awry above.
         if ( ( !defined $data ) || ( length( $data ) != $more ) ) {
-            $sub_handle_bad_read->( $socket );
+            $disconnect_client->( $socket );
             return undef;
         }
 
@@ -1193,9 +1291,21 @@ sub _data_from_socket {
                     my $new_sock = $s->accept();
                     next unless $new_sock;
                     $select->add( $new_sock );
+                    $flush_unauthenticated_clients->();
+                    $self->{'unauthenticated_clients'}->{$new_sock} = {
+                        sock => $new_sock,
+                        ts   => time(),
+                    };
                 } else {
                     $data = $recv_more->( $s, HEADER_SIZE );
-                    return FLAG_RETURN_CHILD_DISCONNECTED if !defined $data;
+                    if ( !defined $data ) {
+                        if ( $self->{'unauthenticated_clients'}->{$s} ) {
+                            # This isn't a condition the caller should care
+                            # about.
+                            next;
+                        }
+                        return FLAG_RETURN_CHILD_DISCONNECTED;
+                    }
 
                     my ( $flags ) = unpack( HEADER_PACKING, $data );
                     my $data_flags = ( $flags & MASK_FLAG_DATA );
@@ -1214,14 +1324,23 @@ sub _data_from_socket {
                     if ( $flags == FLAG_PACKET_CHILD_HELLO ) {
                         # Okay, lets get the length of the child's symbolic name.
                         $data = $recv_more->( $s, HEADER_CHILD_HELLO_ADDITIONAL_SIZE );
-                        return FLAG_RETURN_CHILD_DISCONNECTED if !defined $data;
+                        if ( !defined $data ) {
+                            if ( $self->{'unauthenticated_clients'}->{$s} ) {
+                                # This isn't a condition the caller should care
+                                # about.
+                                next;
+                            }
+                            return FLAG_RETURN_CHILD_DISCONNECTED;
+                        }
 
-                        # Unpack the length and re-use the variable $data.
-                        $data = unpack( HEADER_CHILD_HELLO_PACKING, $data );
-                        ASSERT( $data > 0 );
+                        # Unpack the shared key and symbolic name length.
+                        my ( $proposed_key, $name_len ) = unpack( HEADER_CHILD_HELLO_PACKING, $data );
+                        next unless $VALIDATE->( $s, $name_len > 0 );
+                        next unless $VALIDATE->( $s, $proposed_key == $self->{'shared_key'} );
+                        delete $self->{'unauthenticated_clients'}->{$s};
 
-                        $data = $recv_more->( $s, $data );
-                        return FLAG_RETURN_CHILD_DISCONNECTED if !defined $data;
+                        $data = $recv_more->( $s, $name_len );
+                        next unless $VALIDATE->( $s, defined $data );
 
                         $self->{'socket_to_cid'}->{$s} = $self->{'next_cid'};
                         $self->{'child_info'}->{ $self->{'next_cid'} } = {
@@ -1329,7 +1448,11 @@ sub _data_from_socket {
 
                         return FLAG_PACKET_FINISHED_CHILDREN;
                     } else {
-                        warn "Got packet type ($flags) that I don't know how to handle!";
+                        if ( !exists $self->{'unauthenticated_clients'} ) {
+                            warn "Got packet type ($flags) that I don't know how to handle!";
+                        } else {
+                            $disconnect_client->( $s );
+                        }
                         next;
                     }
                     #next;
@@ -1432,7 +1555,7 @@ sub _do_finished_children_request {
  my $pid = fork();
  
  if ( $pid ) {
-     while ( ! $ipc->finished_children() ) {
+     while ( !$ipc->finished_children() ) {
          $ipc->process_child_data(0);
          waitpid( -1, WNOHANG );
          sleep(0);
@@ -1540,24 +1663,27 @@ distribution.
 =head2 Zombies
 
 Child processes are not reaped automatically by this module, so the caller
-will need to call wait (or similar function) as usual to reap "child"
-processes.
+will need to call wait (or similar function) as usual to reap child processes.
 
 =head2 Security
 
 This module creates a TCP listen socket on a random high-numbered port on
 127.0.0.1. If a malicious program connects to that socket, it could cause the
-"master" process to hang waiting for that socket to disconnect. Resolving this
-issue is considered a "TODO".
+master process to hang waiting for that socket to disconnect. This module takes
+basic steps to insure this does not happen (connecting clients must present the
+correct 32-bit key within 30 seconds of connecting, but this is only checked
+when another client connects), but this is not fool-proof.
 
 =head2 Invalid connections
 
 If someone connects, but does not send the proper data, it is possible that we
 could return from L<process_child_data> with FLAG_PACKET_CHILD_DISCONNECTED
-but without updating any data or the finished child list.
+but without updating any data or the finished child list. I believe all possible
+causes of this have been resolved, but developers should still be aware of this
+potential issue.
 
 Callers checking for a return value of FLAG_PACKET_CHILD_DISCONNECTED should
-therefor also check L<finished_children> to make sure a real "child" actually
+therefor also check L<finished_children> to make sure a real child actually
 finished.
 
 =head2 Unit tests
@@ -1570,14 +1696,6 @@ directory as part of the distribution.
 
 =head1 TO DO
 
-Implement protocol security to reject/expire lingering connections and
-connections that do not send a HELLO.
-
-Return better information for clients that connect and disconnect but send no
-data (currently, we return with FLAG_PACKET_CHILD_DISCONNECTED but don't
-update internal state, so a caller checking for that updated internal state
-could get confused.)
-
 Merge the internal finished_children hash with the internal child_info hash.
 The child_info hash already holds most of the data, a flag to determine
 whether or not that child is still connected would be simple to add, but
@@ -1588,6 +1706,13 @@ of the symbolic name.
 Add unit tests, or make functional tests run as part of "make test".
 
 =head1 CHANGES
+
+=head2 1.47 - 20110622, jeagle
+
+Implement basic integrity checks to prevent unexpected connections from
+interfering with normal operation.
+
+Add L<partition_list> function, L<get_waitable_fds> method.
 
 =head2 1.46 - 20100830, jeagle
 
